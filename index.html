@@ -1,1 +1,72 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicorn Train Adventure</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB, #E0FFFF);
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .train {
+            font-size: 120px;
+            animation: chug 4s linear infinite;
+            margin: 40px auto;
+        }
+        @keyframes chug {
+            0% { transform: translateX(-20px); }
+            50% { transform: translateX(20px); }
+            100% { transform: translateX(-20px); }
+        }
+        .unicorn { font-size: 80px; }
+        h1 { color: #FF69B4; text-shadow: 2px 2px #FFD700; }
+        .kids {
+            font-size: 60px;
+            margin: 20px;
+        }
+        button {
+            background: #FF69B4;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px;
+        }
+        button:hover { background: #FF1493; }
+    </style>
+</head>
+<body>
+    <h1>🌈 Unicorn Train Adventure! 🌈</h1>
+    
+    <div class="train">
+        🚂 <span class="unicorn">🦄</span> 🚃 <span class="unicorn">🦄</span> 🚃
+    </div>
+    
+    <div class="kids">
+        👧‍ (Girl with long brown hair)<br>
+        👦 (Boy with brown hair)
+    </div>
+    
+    <p style="font-size: 28px; color: #4B0082;">
+        Choo-choo! The magical unicorn train is ready for fun!<br>
+        Wave hello to the drivers!
+    </p>
+    
+    <button onclick="makeSound()">🎵 Play Train Song</button>
+    <button onclick="window.location.reload()">🚂 Next Adventure</button>
+    
+    <script>
+        function makeSound() {
+            const sounds = ["Choo Choo!", "Neigh! 🦄", "All aboard!", "Wheeee!"];
+            alert(sounds[Math.floor(Math.random() * sounds.length)]);
+        }
+    </script>
+</body>
+</html>
