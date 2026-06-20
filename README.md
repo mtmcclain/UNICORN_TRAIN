@@ -8,13 +8,24 @@ A chill 2D side-scrolling browser game. Drive the Unicorn Train through the coun
 
 ## Local Development
 
-ES modules require a local server:
+ES modules require a local server. **Do not** open `index.html` as a file.
 
-```bash
-python -m http.server 8765
+### Easy start (Windows)
+
+Double-click **`serve.bat`** in this folder, then open:
+
+**http://127.0.0.1:8765**
+
+Ignore the `http://[::]:8765/` line Python prints — that address usually does not work in browsers.
+
+### Manual start
+
+```powershell
+cd "C:\Users\Mtmcc\.cursor\projects\UNICORN-TRAIN 8-Bit Scroller game"
+python -m http.server 8765 --bind 127.0.0.1 --directory .
 ```
 
-Then visit `http://localhost:8765`
+Then visit **http://127.0.0.1:8765**
 
 ### Controls
 

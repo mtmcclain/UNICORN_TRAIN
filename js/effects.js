@@ -2,6 +2,7 @@ export class Effects {
   constructor() {
     this.hornRings = [];
     this.magicParticles = [];
+    this.popParticles = [];
     this.smokePuffs = [];
     this.smokeTimer = 0;
     this.audioCtx = null;
@@ -66,6 +67,46 @@ export class Effects {
     sub.stop(now + duration + 0.05);
   }
 
+  playPop() {
+    this.resumeAudio();
+    if (!this.audioCtx) return;
+
+    const ctx = this.audioCtx;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+
+    gain.gain.setValueAtTime(0.14, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.14);
+  }
+
+  spawnBalloonPop(x, y, radius, hueOffset = 0) {
+    const colors = ['#ff4757', '#ff7f50', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6'];
+    for (let i = 0; i < 14; i++) {
+      const angle = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+      const speed = 80 + Math.random() * 140;
+      this.popParticles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 40,
+        life: 0.35 + Math.random() * 0.25,
+        maxLife: 0.6,
+        size: 2 + Math.random() * 4,
+        color: colors[(i + hueOffset) % colors.length],
+      });
+    }
+  }
+
   playMagic() {
     this.resumeAudio();
     if (!this.audioCtx) return;
@@ -89,6 +130,46 @@ export class Effects {
     osc.stop(now + 0.25);
   }
 
+  playWoohoo() {
+    this.resumeAudio();
+    if (!this.audioCtx) return;
+
+    try {
+      // Higher kid first, lower kid joins in — simple chirps that won't crash the loop.
+      this._kidCheer(0, 1.45, 0.32);
+      this._kidCheer(0.34, 1.0, 0.34);
+    } catch (err) {
+      console.warn('Woohoo audio failed:', err);
+    }
+  }
+
+  _kidCheer(delay, pitch, volume) {
+    const ctx = this.audioCtx;
+    const t = ctx.currentTime + delay;
+    this._cheerChirp(ctx, t, 300 * pitch, 560 * pitch, 0.17, volume);
+    this._cheerChirp(ctx, t + 0.15, 500 * pitch, 360 * pitch, 0.24, volume * 0.92);
+  }
+
+  _cheerChirp(ctx, start, f0, f1, dur, volume) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(f0, start);
+    osc.frequency.linearRampToValueAtTime(f1, start + dur * 0.4);
+    osc.frequency.linearRampToValueAtTime(f1 * 0.88, start + dur);
+
+    gain.gain.setValueAtTime(0.001, start);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+    gain.gain.setValueAtTime(volume * 0.85, start + dur * 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + dur + 0.05);
+  }
+
   spawnSmokePuff(x, y, speed) {
     const drift = -8 - speed * 0.04;
     const life = 1.1 + Math.random() * 0.4;
@@ -105,13 +186,13 @@ export class Effects {
   }
 
   updateSmoke(dt, speed, stackX, stackY) {
-    if (speed > 3) {
+    if (speed > 3 && this.smokePuffs.length < 36) {
       this.smokeTimer += dt;
-      const interval = Math.max(0.08, 0.35 - speed * 0.001);
+      const interval = Math.max(0.12, 0.35 - speed * 0.00035);
       if (this.smokeTimer >= interval) {
         this.smokeTimer = 0;
         this.spawnSmokePuff(stackX, stackY, speed);
-        if (speed > 120 && Math.random() > 0.5) {
+        if (speed > 120 && this.smokePuffs.length < 34 && Math.random() > 0.5) {
           this.spawnSmokePuff(stackX, stackY, speed);
         }
       }
@@ -168,33 +249,26 @@ export class Effects {
   }
 
   spawnMagic(x, y, speed) {
-    const colors = ['#d040e0', '#f0c030', '#ff80ff', '#fff0a0', '#b060ff'];
-    for (let i = 0; i < 16; i++) {
-      const angle = -0.3 + (Math.random() - 0.5) * 0.8;
-      const vel = 120 + Math.random() * 180 + speed * 0.3;
+    const baseAngle = -1.05;
+    const magicSpeed = 480 + speed * 0.12;
+    const spreads = [-0.32, 0, 0.32];
+    const colors = ['#d040e0', '#fff0a0', '#4d96ff'];
+
+    for (let i = 0; i < 3; i++) {
+      const angle = baseAngle + spreads[i];
       this.magicParticles.push({
         x,
         y,
-        vx: Math.cos(angle) * vel,
-        vy: Math.sin(angle) * vel,
-        life: 0.6 + Math.random() * 0.5,
-        maxLife: 1,
-        size: 3 + Math.random() * 5,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: Math.cos(angle) * magicSpeed,
+        vy: Math.sin(angle) * magicSpeed,
+        life: 2.8,
+        maxLife: 2.8,
+        size: 11,
+        color: colors[i],
+        isProjectile: true,
+        lowGravity: true,
       });
     }
-
-    this.magicParticles.push({
-      x,
-      y,
-      vx: 200 + speed * 0.5,
-      vy: -20,
-      life: 0.8,
-      maxLife: 0.8,
-      size: 10,
-      color: '#fff0a0',
-      isCore: true,
-    });
   }
 
   update(dt, speed) {
@@ -209,10 +283,21 @@ export class Effects {
       const p = this.magicParticles[i];
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 40 * dt;
+      p.vy += (p.lowGravity ? 12 : 40) * dt;
       p.life -= dt;
       if (p.life <= 0) {
         this.magicParticles.splice(i, 1);
+      }
+    }
+
+    for (let i = this.popParticles.length - 1; i >= 0; i--) {
+      const p = this.popParticles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 120 * dt;
+      p.life -= dt;
+      if (p.life <= 0) {
+        this.popParticles.splice(i, 1);
       }
     }
   }
@@ -239,19 +324,31 @@ export class Effects {
     }
 
     for (const p of this.magicParticles) {
+      if (!p.isProjectile) continue;
+
+      const alpha = Math.min(1, p.life / (p.maxLife || 1));
+      const r = parseInt(p.color.slice(1, 3), 16);
+      const g = parseInt(p.color.slice(3, 5), 16);
+      const b = parseInt(p.color.slice(5, 7), 16);
+
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (const p of this.popParticles) {
       const alpha = Math.min(1, p.life / (p.maxLife || 1));
       const r = parseInt(p.color.slice(1, 3), 16);
       const g = parseInt(p.color.slice(3, 5), 16);
       const b = parseInt(p.color.slice(5, 7), 16);
       ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (p.isCore ? 1 : alpha), 0, Math.PI * 2);
-      ctx.fill();
-
-      if (!p.isCore && alpha > 0.3) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
-        ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
-      }
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
     }
   }
 }

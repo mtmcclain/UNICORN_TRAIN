@@ -202,7 +202,7 @@ export class Train {
     const avgR = largeWheels.reduce((s, w) => s + w.r, 0) / largeWheels.length;
     const wheelRadiusPx = avgR * 540;
     const circumference = Math.max(1, 2 * Math.PI * wheelRadiusPx);
-    this._wheelAngle += (speed * dt / circumference) * Math.PI * 2;
+    this._wheelAngle = (this._wheelAngle + (speed * dt / circumference) * Math.PI * 2) % (Math.PI * 2);
   }
 
   draw(ctx, canvasWidth, canvasHeight, speed, time) {

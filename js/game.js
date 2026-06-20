@@ -2,10 +2,10 @@ const INTERNAL_WIDTH = 960;
 const INTERNAL_HEIGHT = 540;
 
 const MIN_SPEED = 0;
-const MAX_SPEED = 280;
+const MAX_SPEED = 1800;
 const DEFAULT_SPEED = 80;
-const ACCEL = 120;
-const DECEL = 90;
+const ACCEL = 700;
+const DECEL = 520;
 
 export class Game {
   constructor(canvas) {
@@ -17,9 +17,13 @@ export class Game {
     this.targetSpeed = DEFAULT_SPEED;
     this.time = 0;
     this.shake = 0;
+    this.woohooCooldown = 1.5;
+    this._woohooUnlocked = false;
+    this.score = 0;
 
     this.keys = new Set();
-    this.touch = { speedUp: false, speedDown: false };
+    this.touch = { speedUp: false, speedDown: false, magicHold: false };
+    this.magicRepeatTimer = 0;
     this.hornPressed = false;
     this.magicPressed = false;
     this.debugAnchors = false;
@@ -28,6 +32,7 @@ export class Game {
     this.train = null;
     this.parallax = null;
     this.effects = null;
+    this.balloons = null;
 
     this._bindInput();
   }
@@ -36,12 +41,30 @@ export class Game {
     const { Train } = await import('./train.js');
     const { Parallax } = await import('./parallax.js');
     const { Effects } = await import('./effects.js');
+    const { Balloons, SCROLL_LAYER } = await import('./balloons.js');
 
     this.train = new Train();
     await this.train.load('assets/unicorn-train.png');
 
     this.parallax = new Parallax(this.width, this.height);
     this.effects = new Effects();
+    this.balloons = new Balloons(this.width, this.height);
+    this._balloonScrollLayer = SCROLL_LAYER;
+  }
+
+  _getBalloonScroll() {
+    return this.parallax?.scroll?.[this._balloonScrollLayer] ?? 0;
+  }
+
+  _checkBalloonHits() {
+    if (!this.balloons || !this.effects) return;
+
+    const popped = this.balloons.checkMagicHits(this.effects.magicParticles, this._getBalloonScroll());
+    for (const pop of popped) {
+      this.score += 1;
+      this.effects.spawnBalloonPop(pop.x, pop.y, pop.radius, pop.hueOffset);
+      this.effects.playPop();
+    }
   }
 
   _bindInput() {
@@ -142,13 +165,18 @@ export class Game {
       if (magicKeys.has(e.code)) this.magicPressed = false;
     });
 
-    this.canvas.addEventListener('click', () => {
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' && e.target !== this.canvas) return;
       this.effects?.resumeAudio();
       this._shootMagic();
       this._showControlsHint();
     });
 
     this._bindTouchControls();
+  }
+
+  _isMobileControls() {
+    return window.matchMedia('(hover: none) and (pointer: coarse), (max-width: 768px)').matches;
   }
 
   _bindTouchControls() {
@@ -158,6 +186,7 @@ export class Game {
     const setHold = (action, active, btn) => {
       if (action === 'speedUp') this.touch.speedUp = active;
       if (action === 'speedDown') this.touch.speedDown = active;
+      if (action === 'magic') this.touch.magicHold = active;
       btn?.classList.toggle('active', active);
     };
 
@@ -175,12 +204,15 @@ export class Game {
         } else if (action === 'horn') {
           this._honk();
         } else if (action === 'magic') {
+          setHold('magic', true, btn);
+          btn.setPointerCapture?.(e.pointerId);
           this._shootMagic();
+          this.magicRepeatTimer = 0.2;
         }
       };
 
       const onUp = (e) => {
-        if (action === 'speedUp' || action === 'speedDown') {
+        if (action === 'speedUp' || action === 'speedDown' || action === 'magic') {
           setHold(action, false, btn);
         }
       };
@@ -201,10 +233,10 @@ export class Game {
   _showControlsHint() {
     const hint = document.getElementById('controls-hint');
     const mobileHint = document.getElementById('mobile-hint');
-    if (hint) {
+    if (hint && !this._isMobileControls()) {
       hint.classList.add('visible');
     }
-    if (mobileHint) {
+    if (mobileHint && this._isMobileControls()) {
       mobileHint.classList.add('visible');
     }
     clearTimeout(this._hintTimeout);
@@ -243,15 +275,47 @@ export class Game {
       this.targetSpeed = Math.max(MIN_SPEED, this.targetSpeed - DECEL * dt);
     }
 
-    const lerpRate = speedUp || speedDown ? 10 : 3;
+    const lerpRate = speedUp || speedDown ? 16 : 3;
     this.speed += (this.targetSpeed - this.speed) * Math.min(1, dt * lerpRate);
 
+    const atMaxSpeed = speedUp && this.targetSpeed >= MAX_SPEED - 2 && this.speed >= MAX_SPEED * 0.92;
+    if (atMaxSpeed) {
+      if (!this._woohooUnlocked) {
+        this.effects?.resumeAudio();
+        this._woohooUnlocked = true;
+      }
+      this.woohooCooldown -= dt;
+      if (this.woohooCooldown <= 0) {
+        try {
+          this.effects?.playWoohoo?.();
+        } catch (err) {
+          console.warn('Woohoo failed:', err);
+        }
+        this.woohooCooldown = 3.5;
+      }
+    } else {
+      this.woohooCooldown = Math.min(this.woohooCooldown, 1.5);
+      if (this.speed < MAX_SPEED * 0.75) {
+        this._woohooUnlocked = false;
+      }
+    }
+
     this.parallax.update(dt, this.speed);
+    this.balloons?.update(dt, this._getBalloonScroll(), this.speed);
     this.train.update(dt, this.speed);
 
     const stack = this.train.getSmokestackPosition(this.width, this.height, this.speed, this.time);
     this.effects.updateSmoke(dt, this.speed, stack.x, stack.y);
     this.effects.update(dt, this.speed);
+    this._checkBalloonHits();
+
+    if (this.touch.magicHold) {
+      this.magicRepeatTimer -= dt;
+      if (this.magicRepeatTimer <= 0) {
+        this._shootMagic();
+        this.magicRepeatTimer = 0.2;
+      }
+    }
 
     if (this.shake > 0) {
       this.shake = Math.max(0, this.shake - dt * 18);
@@ -271,6 +335,8 @@ export class Game {
     ctx.translate(offsetX, offsetY);
 
     this.parallax.draw(ctx, this.speed, this.time);
+    this.balloons?.draw(ctx, this._getBalloonScroll());
+    this._drawScore(ctx);
     this.train.draw(ctx, this.width, this.height, this.speed, this.time);
     this.effects.draw(ctx);
 
@@ -339,6 +405,33 @@ export class Game {
       }
     }
 
+    ctx.restore();
+  }
+
+  _drawScore(ctx) {
+    const label = 'BALLOONS';
+    const scoreText = String(this.score);
+    const cx = this.width / 2;
+    const y = 22;
+
+    ctx.save();
+    ctx.font = '10px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const labelW = ctx.measureText(label).width;
+    const scoreW = ctx.measureText(scoreText).width;
+    const boxW = Math.max(labelW, scoreW) + 24;
+    const boxH = 36;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(cx - boxW / 2, y - 10, boxW, boxH);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillText(label, cx, y + 2);
+
+    ctx.fillStyle = '#ffd93d';
+    ctx.fillText(scoreText, cx, y + 16);
     ctx.restore();
   }
 }

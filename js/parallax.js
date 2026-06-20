@@ -69,12 +69,13 @@ export class Parallax {
   }
 
   update(dt, speed) {
-    this.scroll.far += speed * LAYER_FACTORS.far * dt;
-    this.scroll.mid += speed * LAYER_FACTORS.mid * dt;
-    this.scroll.near += speed * LAYER_FACTORS.near * dt;
-    this.scroll.ground += speed * LAYER_FACTORS.ground * dt;
-    this.scroll.track += speed * LAYER_FACTORS.track * dt;
-    this.scroll.clouds += speed * LAYER_FACTORS.clouds * dt;
+    const scrollWrap = 50000;
+    for (const key of Object.keys(this.scroll)) {
+      this.scroll[key] += speed * LAYER_FACTORS[key] * dt;
+      if (this.scroll[key] > scrollWrap) {
+        this.scroll[key] %= scrollWrap;
+      }
+    }
   }
 
   draw(ctx, speed, time) {
