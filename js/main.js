@@ -51,8 +51,10 @@ async function boot() {
   await game.init();
 
   document.getElementById('controls-hint')?.classList.add('visible');
+  document.getElementById('mobile-hint')?.classList.add('visible');
   setTimeout(() => {
     document.getElementById('controls-hint')?.classList.remove('visible');
+    document.getElementById('mobile-hint')?.classList.remove('visible');
   }, 5000);
 
   requestAnimationFrame(loop);

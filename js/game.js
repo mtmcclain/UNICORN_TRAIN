@@ -19,6 +19,7 @@ export class Game {
     this.shake = 0;
 
     this.keys = new Set();
+    this.touch = { speedUp: false, speedDown: false };
     this.hornPressed = false;
     this.magicPressed = false;
     this.debugAnchors = false;
@@ -146,14 +147,71 @@ export class Game {
       this._shootMagic();
       this._showControlsHint();
     });
+
+    this._bindTouchControls();
+  }
+
+  _bindTouchControls() {
+    const panel = document.getElementById('touch-controls');
+    if (!panel) return;
+
+    const setHold = (action, active, btn) => {
+      if (action === 'speedUp') this.touch.speedUp = active;
+      if (action === 'speedDown') this.touch.speedDown = active;
+      btn?.classList.toggle('active', active);
+    };
+
+    for (const btn of panel.querySelectorAll('[data-action]')) {
+      const action = btn.dataset.action;
+
+      const onDown = (e) => {
+        e.preventDefault();
+        this.effects?.resumeAudio();
+        this._showControlsHint();
+
+        if (action === 'speedUp' || action === 'speedDown') {
+          setHold(action, true, btn);
+          btn.setPointerCapture?.(e.pointerId);
+        } else if (action === 'horn') {
+          this._honk();
+        } else if (action === 'magic') {
+          this._shootMagic();
+        }
+      };
+
+      const onUp = (e) => {
+        if (action === 'speedUp' || action === 'speedDown') {
+          setHold(action, false, btn);
+        }
+      };
+
+      btn.addEventListener('pointerdown', onDown);
+      btn.addEventListener('pointerup', onUp);
+      btn.addEventListener('pointercancel', onUp);
+      btn.addEventListener('pointerleave', onUp);
+      btn.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    document.addEventListener('touchmove', (e) => {
+      if (e.target.closest('#touch-controls')) return;
+      e.preventDefault();
+    }, { passive: false });
   }
 
   _showControlsHint() {
     const hint = document.getElementById('controls-hint');
-    if (!hint) return;
-    hint.classList.add('visible');
+    const mobileHint = document.getElementById('mobile-hint');
+    if (hint) {
+      hint.classList.add('visible');
+    }
+    if (mobileHint) {
+      mobileHint.classList.add('visible');
+    }
     clearTimeout(this._hintTimeout);
-    this._hintTimeout = setTimeout(() => hint.classList.remove('visible'), 5000);
+    this._hintTimeout = setTimeout(() => {
+      hint?.classList.remove('visible');
+      mobileHint?.classList.remove('visible');
+    }, 5000);
   }
 
   _honk() {
@@ -172,8 +230,12 @@ export class Game {
   update(dt) {
     this.time += dt;
 
-    const speedUp = !this.debugWheels && (this.keys.has('ArrowUp') || this.keys.has('KeyW'));
-    const speedDown = !this.debugWheels && (this.keys.has('ArrowDown') || this.keys.has('KeyS'));
+    const speedUp = !this.debugWheels && (
+      this.keys.has('ArrowUp') || this.keys.has('KeyW') || this.touch.speedUp
+    );
+    const speedDown = !this.debugWheels && (
+      this.keys.has('ArrowDown') || this.keys.has('KeyS') || this.touch.speedDown
+    );
 
     if (speedUp) {
       this.targetSpeed = Math.min(MAX_SPEED, this.targetSpeed + ACCEL * dt);

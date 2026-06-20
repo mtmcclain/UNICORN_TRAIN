@@ -20,6 +20,9 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game-canvas {
@@ -51,4 +54,91 @@ html, body {
 
 #controls-hint.visible {
   opacity: 1;
+}
+
+#mobile-hint {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  line-height: 1.6;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 8px 12px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  text-align: center;
+  max-width: 90%;
+  display: none;
+}
+
+#mobile-hint.visible {
+  opacity: 1;
+}
+
+#touch-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 420px);
+  z-index: 10;
+}
+
+.touch-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.touch-btn {
+  flex: 1;
+  min-height: 52px;
+  padding: 12px 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  line-height: 1.4;
+  color: #fff;
+  background: rgba(30, 30, 50, 0.88);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.touch-btn:active,
+.touch-btn.active {
+  background: rgba(90, 60, 140, 0.95);
+  border-color: rgba(255, 220, 120, 0.9);
+  transform: scale(0.97);
+}
+
+.touch-btn-action {
+  background: rgba(50, 35, 90, 0.9);
+}
+
+@media (hover: none) and (pointer: coarse), (max-width: 768px) {
+  #touch-controls {
+    display: flex;
+  }
+
+  #mobile-hint {
+    display: block;
+  }
+
+  #controls-hint {
+    display: none;
+  }
+
+  #game-canvas {
+    max-height: calc(100% - 140px);
+  }
 }

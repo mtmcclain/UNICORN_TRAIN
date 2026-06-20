@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Unicorn Train</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -11,6 +11,19 @@
     <canvas id="game-canvas"></canvas>
     <div id="controls-hint" class="visible">
       UNICORN TRAIN — W/↑ faster · S/↓ slower · H/Space honk · X/Click magic
+    </div>
+    <div id="mobile-hint" class="visible">
+      Use the buttons below to drive
+    </div>
+    <div id="touch-controls" aria-label="Game controls">
+      <div class="touch-row speed-row">
+        <button type="button" class="touch-btn" data-action="speedDown">SLOWER</button>
+        <button type="button" class="touch-btn" data-action="speedUp">FASTER</button>
+      </div>
+      <div class="touch-row action-row">
+        <button type="button" class="touch-btn touch-btn-action" data-action="horn">HONK</button>
+        <button type="button" class="touch-btn touch-btn-action" data-action="magic">MAGIC</button>
+      </div>
     </div>
   </div>
   <script type="module" src="js/main.js"></script>
